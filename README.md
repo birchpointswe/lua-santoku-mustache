@@ -1,181 +1,76 @@
-# santoku.mustache
+# santoku-mustache
 
-Mustache template renderer with all extensions enabled.
+A Mustache template renderer for the santoku ecosystem, built on base
+[`santoku`](../lua-santoku/README.md). It bundles the upstream
+[mustach](https://gitlab.com/jobol/mustach) C library and cJSON, and renders
+templates against either a Lua value or a JSON string. All mustach extensions are
+enabled (`Mustach_With_AllExtensions`).
 
-## API
+This README is a usage guide, not an API reference. **The tests are the spec**:
+`test/spec/santoku/mustache.lua` exercises the full surface; read it for the
+exhaustive case list. For Mustache template syntax itself (sections, partials,
+delimiters, the comparison and object-iteration extensions), see the upstream
+mustach project.
+
+## Surface
+
+The module is a single function. Calling it compiles a template and returns a
+render function; calling the render function with data produces a string.
 
 ```lua
 local mustache = require("santoku.mustache")
+
+local render = mustache("{{greeting}} {{target}}")
+render({ greeting = "hello", target = "world" })   -- "hello world"
 ```
 
-The module returns a **single function** that compiles templates:
+Compile takes an optional second table argument:
+
+- `dedent` (boolean, default `true`): strip the shared leading whitespace from
+  every line, then drop a single leading newline. Pass `dedent = false` to keep
+  the template verbatim.
+- `partials` (table): a name to partial map. Each value is a template string or a
+  compiled render function (whose source is reused).
+
+Render takes one argument, the context. A Lua `table`, `number`, `boolean`, or
+`nil` is read directly. A `string` is parsed as JSON via the bundled cJSON.
 
 ```lua
-render = mustache(template) -- dedent=true
-render = mustache(template, { dedent = false }) -- dedent=false
-render = mustache(template, { partials = { ... } }) -- with partials
-result = render(data)
+-- Lua table context
+mustache("{{a.b.c}}")({ a = { b = { c = "value" } } })   -- "value"
+
+-- array section, {{.}} is the current element
+mustache("{{#items}}{{.}}{{/items}}")({ items = { 1, 2, 3 } })   -- "123"
+
+-- JSON string context
+local cjson = require("cjson")
+mustache("{{name}}: {{value}}")(cjson.encode({ name = "test", value = 42 }))   -- "test: 42"
+
+-- partials, value may be a string or a compiled render function
+local item = mustache("<li>{{.}}</li>")
+local list = mustache("{{#items}}{{>item}}{{/items}}", { partials = { item = item } })
+list({ items = { 1, 2, 3 } })   -- "<li>1</li><li>2</li><li>3</li>"
 ```
 
-## Parameters
+Covers (`test/spec/santoku/mustache.lua`): variables, missing keys, dot notation,
+sections and inverted sections, array and object-list iteration, scalar root
+context, nested context, string and compiled partials, JSON string input, dedent
+on and off, and HTML escaping (`{{x}}` escaped, `{{{x}}}` and `{{&x}}` raw).
 
-### Compile: `mustache(template [, opts])`
+## Conventions
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `template` | `string` | required | Mustache template |
-| `opts.dedent` | `boolean` | `true` | Strip leading whitespace |
-| `opts.partials` | `table` | `nil` | Partial templates (string or compiled) |
-
-### Render: `render(data)`
-
-| Parameter | Type | Description |
-|-----------|------|-------------|
-| `data` | `table` or `string` | Context (Lua table or JSON string) |
-
-## Features
-
-- **Auto-dedent**: Removes shared leading whitespace + leading/trailing `\n`
-- **Partials**: In-memory only (no file system access)
-- **Extensions**: Equal/compare, JSON pointer, object iteration, colon substitution
-- **Fast path**: Zero-copy for Lua tables
-- **Fallback**: JSON string parsing via cJSON
-- **Max depth**: 256 levels of nesting
-
-## Examples
-
-### Basic Usage
-
-```lua
-mustache("Hello {{name}}")({name = "World"})
---> "Hello World"
-```
-
-### With Dedent
-
-```lua
-mustache([[
-  <div>
-    {{content}}
-  </div>
-]])({content = "Hi"})
---> "<div>\n  Hi\n</div>"
-```
-
-### Partials
-
-```lua
-mustache("{{> header}}\n{{body}}", {
-  partials = {header = "<h1>Title</h1>"}
-})({body = "text"})
---> "<h1>Title</h1>\ntext"
-```
-
-### Compile + Reuse
-
-```lua
-local render = mustache("Hi {{name}}")
-render({name = "Alice"})  --> "Hi Alice"
-render({name = "Bob"})    --> "Hi Bob"
-```
-
-### Sections (Arrays)
-
-```lua
-mustache([[
-  {{#users}}
-    - {{name}}
-  {{/users}}
-]])({
-  users = {
-    {name = "Alice"},
-    {name = "Bob"}
-  }
-})
---> "  - Alice\n  - Bob"
-```
-
-### Conditionals
-
-```lua
-mustache("{{#show}}Visible{{/show}}{{^show}}Hidden{{/show}}")({show = true})
---> "Visible"
-
-mustache("{{#show}}Visible{{/show}}{{^show}}Hidden{{/show}}")({show = false})
---> "Hidden"
-```
-
-### Object Iteration (Extension)
-
-```lua
-mustache([[
-  {{#data.*}}
-    {{*}}: {{.}}
-  {{/data.*}}
-]])({
-  data = {name = "Alice", age = 30}
-})
---> "  name: Alice\n  age: 30"
-```
-
-### Comparisons (Extension)
-
-```lua
-mustache("{{#age>18}}Adult{{/age>18}}")({age = 25})
---> "Adult"
-
-mustache("{{#price<=100}}Affordable{{/price<=100}}")({price = 50})
---> "Affordable"
-```
-
-## Type Conversion
-
-| Lua Type | Mustache Behavior |
-|----------|-------------------|
-| `nil` | Empty string `""` |
-| `boolean` | `"true"` or `"false"` |
-| `number` | Formatted with `"%.14g"` |
-| `string` | As-is |
-| `table` | Array (iterate) or Object (truthy test) |
-
-### Array Detection
-
-Tables are treated as arrays when they have:
-- Consecutive integer keys starting at 1
-- No holes (no `nil` values)
-- No string/non-sequential keys
-
-Otherwise, they're treated as objects.
-
-### Truthiness
-
-- **Falsy**: `nil`, `false`, `0`, `""` (empty string), `{}` (empty table)
-- **Truthy**: All other values
-
-## Mustache Tags
-
-| Tag | Description | Example |
-|-----|-------------|---------|
-| `{{name}}` | Variable (escaped) | `{{title}}` |
-| `{{{name}}}` | Unescaped variable | `{{{html}}}` |
-| `{{#section}}` | Section (loop/conditional) | `{{#users}}...{{/users}}` |
-| `{{^inverted}}` | Inverted section | `{{^logged_in}}...{{/logged_in}}` |
-| `{{! comment}}` | Comment (ignored) | `{{! TODO: fix }}` |
-| `{{> partial}}` | Include partial | `{{> header}}` |
-| `{{.}}` | Current context | `{{#items}}{{.}}{{/items}}` |
-| `{{=<% %>=}}` | Change delimiters | `{{=<% %>=}}` |
-
-## Extensions Enabled
-
-All mustach extensions are enabled by default (`Mustach_With_AllExtensions`):
-
-- **Equality testing**: `{{#key=value}}` or `{{#key=!value}}`
-- **Comparisons**: `{{#key>value}}`, `{{#key>=value}}`, `{{#key<value}}`, `{{#key<=value}}`
-- **JSON Pointer**: `{{/path/to/value}}`
-- **Object iteration**: `{{#obj.*}}{{*}}:{{.}}{{/obj.*}}`
-- **Colon substitution**: `{{:#key}}` for keys starting with reserved chars
-- **Empty tags**: `{{}}` allowed
-- **Escape first compare**: Auto-escape comparison operators at start
+- **Compile once, render many.** `mustache(template)` returns a render closure that
+  holds the (optionally dedented) source and its partials; reuse it across calls.
+- **Value formatting.** `nil` renders as the empty string, booleans as `"true"` or
+  `"false"`, numbers with `"%.14g"`, strings as is.
+- **Table shape.** A table with consecutive integer keys from 1 and no holes is
+  treated as an array and iterated; any other non-empty table is an object. An
+  empty table is falsy for section purposes.
+- **Truthiness for sections.** `nil`, `false`, `0`, `""`, and `{}` are falsy;
+  everything else is truthy.
+- **In-memory partials only.** There is no filesystem lookup; a partial that is not
+  in the `partials` table is a render error.
+- **Nesting limit.** Sections nest up to 256 levels deep.
 
 ## License
 
