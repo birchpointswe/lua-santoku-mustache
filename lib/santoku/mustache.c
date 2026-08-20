@@ -3,9 +3,8 @@
 #include <santoku/lua/utils.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
 
-#include "cjson/cJSON.h"
-#include "mustach-cjson.h"
 #include "mustach-wrap.h"
 
 #define MUSTACH_MAX_DEPTH 256
@@ -311,7 +310,6 @@ static int lua_mustache_get_partial_hook(const char *name, struct mustach_sbuf *
     return MUSTACH_OK;
   }
 
-
   if (lua_type(L, -1) == LUA_TFUNCTION) {
     const char *upvalue = lua_getupvalue(L, -1, 1);
     if (upvalue != NULL && lua_type(L, -1) == LUA_TSTRING) {
@@ -443,29 +441,20 @@ static int tk_mustache_render(lua_State *L) {
   mustach_wrap_get_partial = lua_mustache_get_partial_hook;
 
   int arg_type = lua_type(L, 1);
-  if (arg_type == LUA_TTABLE || arg_type == LUA_TNUMBER ||
-      arg_type == LUA_TBOOLEAN || arg_type == LUA_TNIL) {
-    struct lua_mustache_context ctx;
-    ctx.L = L;
-    ctx.root_idx = 1;
-    ctx.partials_idx = partials_idx;
-    current_partial_context = &ctx;
-    rc = mustach_wrap_mem(tstr, tlen, &lua_mustache_itf, &ctx, Mustach_With_AllExtensions, &result, &size);
-  } else {
-    size_t jlen;
-    const char *jstr = tk_lua_checklstring(L, 1, &jlen, "json string");
-    cJSON *root = cJSON_Parse(jstr);
-    if (!root) {
-      mustach_wrap_get_partial = old_hook;
-      current_partial_context = NULL;
-      const char *err = cJSON_GetErrorPtr();
-      tk_lua_verror(L, 3, "mustache render", "json parse failed", err ? err : "unknown error");
-      return 0;
-    }
-    fflush(stderr);
-    rc = mustach_cJSON_mem(tstr, tlen, root, Mustach_With_AllExtensions, &result, &size);
-    cJSON_Delete(root);
+  if (arg_type != LUA_TTABLE && arg_type != LUA_TNUMBER &&
+      arg_type != LUA_TBOOLEAN && arg_type != LUA_TNIL) {
+    mustach_wrap_get_partial = old_hook;
+    current_partial_context = NULL;
+    tk_lua_verror(L, 3, "mustache render", "unsupported context type", lua_typename(L, arg_type));
+    return 0;
   }
+
+  struct lua_mustache_context ctx;
+  ctx.L = L;
+  ctx.root_idx = 1;
+  ctx.partials_idx = partials_idx;
+  current_partial_context = &ctx;
+  rc = mustach_wrap_mem(tstr, tlen, &lua_mustache_itf, &ctx, Mustach_With_AllExtensions, &result, &size);
 
   mustach_wrap_get_partial = old_hook;
   current_partial_context = NULL;

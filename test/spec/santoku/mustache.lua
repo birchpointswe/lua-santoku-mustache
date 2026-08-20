@@ -3,7 +3,6 @@ local err = require("santoku.error")
 local assert = err.assert
 local vdt = require("santoku.validate")
 local eq = vdt.isequal
-local cjson = require("cjson")
 
 local mch = require("santoku.mustache")
 
@@ -71,12 +70,6 @@ test("mustache", function ()
     local inner = mch("[{{val}}]")
     local outer = mch("({{>inner}})", { partials = { inner = inner } })
     assert(eq("([hello])", outer({ val = "hello" })))
-  end)
-
-  test("json input", function ()
-    local tpl = mch("{{name}}: {{value}}")
-    local json = cjson.encode({ name = "test", value = 42 })
-    assert(eq("test: 42", tpl(json)))
   end)
 
   test("scalar context", function ()

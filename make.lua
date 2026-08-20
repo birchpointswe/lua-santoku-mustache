@@ -1,25 +1,27 @@
 local env = {
   name = "santoku-mustache",
-  version = "2.0.0-1",
+  version = "2.1.0-1",
   license = "MIT",
   public = true,
   dependencies = {
     "lua == 5.1",
     "santoku >= 2.0.0, < 3.0.0",
   },
+  vendor = {
+    {
+      file = "deps/mustach/mustach-1.2.10.tar.gz",
+      url = "https://gitlab.com/jobol/mustach/-/archive/1.2.10/mustach-1.2.10.tar.gz",
+      sha256 = "95a2a351e748db9eeb98f40ba8bfbf010c1c6d2e725d31a3c7e602526d05bf90",
+    },
+  },
   cflags = {
     "-I$(shell luarocks show santoku --rock-dir)/include/",
-    "-I$(PWD)/deps/mustach/cJSON-1.7.19/install/include",
     "-I$(PWD)/deps/mustach/mustach-1.2.10/",
   },
   ldflags = {
-    "$(PWD)/deps/mustach/cJSON-1.7.19/libcjson.a",
     "$(PWD)/deps/mustach/mustach-1.2.10/libmustach.a"
   },
   test = {
-    dependencies = {
-      "lua-cjson >= 2.1.0.10-1"
-    },
     wasm = {
       ldflags = {
         "-sALLOW_TABLE_GROWTH=1",

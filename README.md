@@ -2,9 +2,9 @@
 
 A Mustache template renderer for the santoku ecosystem, built on base
 [`santoku`](../lua-santoku/README.md). It bundles the upstream
-[mustach](https://gitlab.com/jobol/mustach) C library and cJSON, and renders
-templates against either a Lua value or a JSON string. All mustach extensions are
-enabled (`Mustach_With_AllExtensions`).
+[mustach](https://gitlab.com/jobol/mustach) C library and renders templates
+against a Lua value. All mustach extensions are enabled
+(`Mustach_With_AllExtensions`).
 
 This README is a usage guide, not an API reference. **The tests are the spec**:
 `test/spec/santoku/mustache.lua` exercises the full surface; read it for the
@@ -32,8 +32,8 @@ Compile takes an optional second table argument:
 - `partials` (table): a name to partial map. Each value is a template string or a
   compiled render function (whose source is reused).
 
-Render takes one argument, the context. A Lua `table`, `number`, `boolean`, or
-`nil` is read directly. A `string` is parsed as JSON via the bundled cJSON.
+Render takes one argument, the context: a Lua `table`, `number`, `boolean`, or
+`nil`. Any other type is a render error.
 
 ```lua
 -- Lua table context
@@ -41,10 +41,6 @@ mustache("{{a.b.c}}")({ a = { b = { c = "value" } } })   -- "value"
 
 -- array section, {{.}} is the current element
 mustache("{{#items}}{{.}}{{/items}}")({ items = { 1, 2, 3 } })   -- "123"
-
--- JSON string context
-local cjson = require("cjson")
-mustache("{{name}}: {{value}}")(cjson.encode({ name = "test", value = 42 }))   -- "test: 42"
 
 -- partials, value may be a string or a compiled render function
 local item = mustache("<li>{{.}}</li>")
@@ -54,8 +50,8 @@ list({ items = { 1, 2, 3 } })   -- "<li>1</li><li>2</li><li>3</li>"
 
 Covers (`test/spec/santoku/mustache.lua`): variables, missing keys, dot notation,
 sections and inverted sections, array and object-list iteration, scalar root
-context, nested context, string and compiled partials, JSON string input, dedent
-on and off, and HTML escaping (`{{x}}` escaped, `{{{x}}}` and `{{&x}}` raw).
+context, nested context, string and compiled partials, dedent on and off, and
+HTML escaping (`{{x}}` escaped, `{{{x}}}` and `{{&x}}` raw).
 
 ## Conventions
 
