@@ -1,6 +1,5 @@
 build/
 lua_modules/
-deps/mustach/*.tar.gz
 *.swp
 *.swo
 .luacov
