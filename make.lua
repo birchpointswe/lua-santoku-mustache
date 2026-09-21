@@ -1,4 +1,5 @@
 local fs = require("santoku.fs")
+local rock = require("santoku.make.rock")
 local vendor = require("santoku.make.vendor")
 
 local vendored = {
@@ -16,7 +17,7 @@ end
 
 local env = {
   name = "santoku-mustache",
-  version = "2.1.2-1",
+  version = "2.1.3-1",
   license = "MIT",
   public = true,
   dependencies = {
@@ -27,7 +28,7 @@ local env = {
     include = include,
   },
   cflags = {
-    "-I$(shell luarocks show santoku --rock-dir)/include/",
+    rock.include("santoku"),
     "-I$(PWD)/deps/mustach/mustach-1.2.10/",
   },
   ldflags = {
