@@ -1,6 +1,6 @@
 MUSTACH_CFLAGS := -fPIC -Wall -Wextra -DVERSION=1.2.10
 
-results.mk:
+results.mk: Makefile
 	[ -f mustach-1.2.10.tar.gz ] || { echo "missing vendored mustach-1.2.10.tar.gz; run 'toku vendor'" >&2; exit 1; }
 	if [ -d mustach-1.2.10 ]; then rm -rf mustach-1.2.10; fi
 	tar xf mustach-1.2.10.tar.gz
