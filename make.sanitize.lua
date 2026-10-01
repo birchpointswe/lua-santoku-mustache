@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2025 Birch Point SWE
 local arr = require("santoku.array")
 local fs = require("santoku.fs")
 local err = require("santoku.error")

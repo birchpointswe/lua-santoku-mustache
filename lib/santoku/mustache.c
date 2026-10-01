@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+// SPDX-FileCopyrightText: 2025 Birch Point SWE
 #include <lua.h>
 #include <lauxlib.h>
 #include <santoku/lua/utils.h>

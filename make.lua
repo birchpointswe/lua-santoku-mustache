@@ -1,3 +1,5 @@
+-- SPDX-License-Identifier: MIT
+-- SPDX-FileCopyrightText: 2025 Birch Point SWE
 local fs = require("santoku.fs")
 local rock = require("santoku.make.rock")
 local vendor = require("santoku.make.vendor")
@@ -17,8 +19,17 @@ end
 
 local env = {
   name = "santoku-mustache",
-  version = "2.1.3-1",
+  version = "2.1.4-1",
   license = "MIT",
+  copyright = "Birch Point SWE",
+  vendored = {
+    {
+      name = "mustach", version = "1.2.10",
+      source = "https://gitlab.com/jobol/mustach/-/archive/1.2.10/mustach-1.2.10.tar.gz",
+      copyright = "(c) 2017-2024 by José Bollo",
+      license = "0BSD",
+    },
+  },
   public = true,
   dependencies = {
     "lua == 5.1",
